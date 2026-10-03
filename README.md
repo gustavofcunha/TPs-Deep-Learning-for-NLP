@@ -1,4 +1,4 @@
-# Deep Learning for Natural Language Processing — Practical Assignments
+# Deep Learning for Natural Language Processing: Practical Assignments
 
 Repository hosting the practical assignments for the Deep Learning for NLP course at the **Universidade Federal de Minas Gerais (UFMG)**.
 
@@ -49,10 +49,23 @@ This assignment investigates dense distributed representations (**word embedding
 - **Training Epochs:** `1`, `5`, and `10`
 
 ### Evaluation
-Models are evaluated on the **Google Analogy Test Set** (`questions-words.txt`, ~19k quadruplets $A : B :: C : D$) using algebraic vector composition:
-$$\vec{R} = \vec{v}(B) - \vec{v}(A) + \vec{v}(C)$$
+Models are evaluated on the **Google Analogy Test Set** (`questions-words.txt`, ~19.5k quadruplets $A : B :: C : D$) using the vector algebraic operation specified in the course assignment:
+$$\vec{R} = \vec{v}(B) + \vec{v}(A) - \vec{v}(C)$$
 
-The performance is quantified by the **Mean Cosine Distance** between the predicted vector $\vec{R}$ and the expected target vector $\vec{v}(D)$. The optimal model configuration is the one that minimizes this distance.
+Model quality is quantified using two complementary metrics:
+1. **Cosine Distance ($d \in [0, 2]$):** The formal loss metric from the assignment handout, where lower values indicate closer proximity to the expected target vector $\vec{v}(D)$ ($d=0$ is an exact match).
+2. **Intuitive Alignment Score ($s = 1 - d \in [-1, 1]$):** A normalized directional alignment score where $+1$ represents perfect alignment ($0^\circ$), $0$ represents orthogonality ($90^\circ$), and $-1$ represents diametric opposition ($180^\circ$). All comparative charts, heatmaps, and ranking tables follow this intuitive $[-1, 1]$ scale (higher is better).
+
+For each configuration, the pipeline computes the **Global Mean and Standard Deviation**, as well as stratified metrics across all 14 individual categories and semantic vs. syntactic blocks. 
+
+### Resource Profiling and Pareto Efficiency Trade-offs
+To evaluate the trade-off between representation quality and computational cost, the pipeline profiles:
+- **Hardware Context:** Platform CPU model, core counts, RAM availability, and GPU device.
+- **Resource Utilization:** Wall-clock training duration (`train_time_sec`), evaluation time, accumulated CPU time, peak memory footprint (`peak_ram_mb`), and processing throughput (`throughput_kwords_sec`).
+- **Parallelism:** Multiprocessing across CPU cores (`workers = os.cpu_count()`).
+
+### Experiment Checkpointing and Resilience
+The 54 grid combinations ($2 \times 3 \times 3 \times 3$) are executed with persistent checkpointing: each model's evaluation metrics and resource statistics are appended immediately to `TP1/outputs/experiment_results.csv`. If a Google Colab session disconnects, the execution script automatically detects completed models and resumes from where it stopped without duplicating compute.
 
 ### Running the Notebook
 Open and execute the self-contained notebook:
