@@ -1,85 +1,90 @@
-# Plano de Trabalho: Implementação Gradual do TP1
+# Implementation Plan: Incremental Execution for TP1
 
-Este plano detalha o passo a passo para a implementação das seções do notebook (`TP1/src/word2vec_hyperparameters.ipynb`), com base nas decisões aprovadas e nas diretrizes pedagógicas.
+This plan details the step-by-step roadmap for implementing the notebook sections (`TP1/src/word2vec_hyperparameters.ipynb`), aligned with approved decisions and pedagogical guidelines.
 
 ---
 
-## 1. O que Estamos Calculando Exatamente? (Métricas Estatísticas e Escala Mapeada)
+## 1. What Are We Computing Exactly? (Statistical Metrics and Scale Mapping)
 
-Para cada pergunta do teste de analogias $i$ (ex.: *Paris : France :: Berlin : Germany*):
-1. **Cálculo do Vetor Resultante $\vec{R}_i$ (Decisão 1 - Fórmula Literal do Enunciado):**
+For each analogy question $i$ (e.g., *Paris : France :: Berlin : Germany*):
+1. **Resultant Vector Calculation $\vec{R}_i$ (Literal Assignment Formula):**
    $$\vec{R}_i = \vec{v}(\text{France}) + \vec{v}(\text{Paris}) - \vec{v}(\text{Berlin})$$
-2. **Distância de Cosseno Original ($d_i \in [0, 2]$):**
+2. **Original Cosine Distance ($d_i \in [0, 2]$):**
    $$d_i = 1 - \frac{\vec{R}_i \cdot \vec{v}(\text{Germany})}{\|\vec{R}_i\|_2 \|\vec{v}(\text{Germany})\|_2} \quad \in [0, 2]$$
-3. **Mapeamento de Alinhamento Intuitivo ($s_i \in [-1, 1]$):**
-   Para tornar a interpretação e a visualização intuitivas, mapeamos linearmente a distância para a escala de alinhamento:
+3. **Intuitive Alignment Mapping ($s_i \in [-1, 1]$):**
+   To make interpretation intuitive, we linearly map distance to an alignment scale:
    $$s_i = 1 - d_i = \frac{\vec{R}_i \cdot \vec{v}(\text{Germany})}{\|\vec{R}_i\|_2 \|\vec{v}(\text{Germany})\|_2} \quad \in [-1, 1]$$
-   - $s_i = +1.0$: Alinhamento perfeito na mesma direção ($0^\circ$).
-   - $s_i = 0.0$: Vetores ortogonais / neutros ($90^\circ$).
-   - $s_i = -1.0$: Vetores em direções opostas ($180^\circ$).
-   - **Interpretação:** Quanto maior, melhor. Todos os gráficos comparativos, mapas de calor e análises usarão essa escala $[-1, 1]$.
+   - $s_i = +1.0$: Perfect collinear alignment ($0^\circ$).
+   - $s_i = 0.0$: Orthogonal vectors ($90^\circ$).
+   - $s_i = -1.0$: Opposing directions ($180^\circ$).
+   - **Interpretation:** Higher is better. Formal comparative analyses evaluate both the assignment distance $[0, 2]$ and alignment $[-1, 1]$.
 
-A partir desses valores individuais, calculamos as seguintes **estatísticas consolidadas para cada um dos 54 modelos**:
+From these individual values, we compute consolidated statistics across each of the 54 models:
 
-| Métrica | O que estamos calculando? | Interpretação Científica |
+| Metric | Calculation Description | Scientific Interpretation |
 | :--- | :--- | :--- |
-| **Média Global de Alinhamento ($\overline{S}_{\text{global}}$)** | A média simples de todos os $s_i$ nas perguntas cobertas. | **Métrica principal:** Varia de -1 a 1. Quanto maior, melhor a capacidade preditiva do modelo. |
-| **Desvio Padrão Global ($\sigma_{\text{global}}$)** | A variabilidade dos acertos individuais em torno da média. | **Estabilidade:** Um desvio menor significa comportamento homogêneo e previsível entre as perguntas. |
-| **Médias por Categoria ($\overline{S}_1, \dots, \overline{S}_{14}$)** | A média de alinhamento calculada separadamente para cada uma das 14 categorias. | Diagnóstico fino: revela os pontos fortes e fracos específicos do modelo. |
-| **Desvio Padrão entre Categorias ($\sigma_{\text{categorias}}$)** | O desvio padrão das 14 médias de categorias. | **Consistência temática:** Se for baixo, o modelo é versátil; se for alto, ele é especialista em um domínio e falho em outro. |
-| **Média Semântica vs. Sintática** | A média das categorias de significado comparada à média das categorias gramaticais. | Compara se a configuração favorece relações semânticas ou sintáticas. |
-| **Distância de Cosseno ($\overline{D}_{\text{global}}, \sigma_{\text{global}}$)** | A métrica original em $[0, 2]$ onde menor é melhor. | Preservada para conformidade estrita com o texto do enunciado do professor. |
+| **Global Mean Alignment ($\overline{S}_{\text{global}}$)** | Arithmetic mean of all $s_i$ across evaluated quadruplets. | Global capability: ranges from -1 to 1; higher indicates superior predictive geometry. |
+| **Global Standard Deviation ($\sigma_{\text{global}}$)** | Spread of individual predictions around the mean. | Stability: lower standard deviation reflects consistent behavior across quadruplets. |
+| **Category Means ($\overline{S}_1, \dots, \overline{S}_{14}$)** | Mean alignment computed separately for each of the 14 categories. | Granular diagnostic: isolates category-specific strengths and weaknesses. |
+| **Category Standard Deviation ($\sigma_{\text{categories}}$)** | Standard deviation across the 14 category means. | Domain consistency: low values indicate balanced capability; high values indicate narrow specialization. |
+| **Semantic vs. Syntactic Means** | Mean performance on semantic categories contrasted with syntactic categories. | Compares whether an architecture favors topical semantics or morphological syntax. |
+| **Cosine Distance ($\overline{D}_{\text{global}}, \sigma_{\text{global}}$)** | Original assignment metric in $[0, 2]$ where lower is better. | Preserved for strict compliance with the assignment specification. |
 
 ---
 
-## 2. Consumo de Recursos Computacionais e Informações de Hardware
+## 2. Computational Resource Consumption and Hardware Profiling
 
-Para avaliar o *trade-off* entre ganho de desempenho e custo computacional (fronteira de Pareto), registramos a cada modelo:
-- **Perfil do Hardware:** Modelo da CPU, quantidade de núcleos lógicos, memória RAM total disponível e acelerador GPU (quando presente no Colab).
-- **Paralelismo:** Número de *worker threads* ativas (`NUM_WORKERS = max(1, cpu_count)`).
-- **Tempo de Execução:** Duração do treinamento (`train_time_sec`), tempo de avaliação (`eval_time_sec`) e tempo total do passo.
-- **Tempo de CPU:** Tempo efetivo de processador acumulado (`cpu_time_sec`).
-- **Consumo de Memória:** Pico de uso de memória física residente (`peak_ram_mb`).
-- **Vazão (*Throughput*):** Milhares de palavras processadas por segundo (`throughput_kwords_sec`).
-
----
-
-## 3. Como Evitar Perder Tudo se o Colab Desconectar? (Mecanismo de Resiliência)
-
-1. **Checkpoint Imediato em Disco (`TP1/outputs/experiment_results.csv`):**
-   * Assim que o modelo $k$ termina o treino e a avaliação, a linha completa com seus hiperparâmetros, métricas e dados de hardware é gravada no CSV.
-   * Não mantemos resultados exclusivamente na memória volátil (RAM).
-2. **Capacidade de Retomada Automática (*Resume*):**
-   * Antes de treinar o modelo $k$, o código verifica se a combinação já está presente no CSV.
-   * Se já estiver salva, pula instantaneamente para a próxima.
-   * Se a sessão cair no meio da grade, basta reconectar e rodar a célula novamente: ela continua exatamente de onde parou.
-3. **Barra de Progresso e Logs de Execução:**
-   * Prints formatados indicando o progresso `[k/54]`, o tempo do passo, o pico de RAM e o horário projetado de término (ETA).
+To evaluate the trade-off between representation quality and compute cost (Pareto frontier), each model records:
+- **Hardware Profile:** CPU model, logical core count, total physical RAM, and accelerator profile (when running in Colab).
+- **Parallelism:** Active worker threads (`NUM_WORKERS = max(1, cpu_count)`).
+- **Execution Times:** Training duration (`train_time_sec`), evaluation duration (`eval_time_sec`), and step elapsed duration.
+- **CPU Time:** Cumulative processor execution time (`cpu_time_sec`).
+- **Memory Footprint:** Peak resident set memory (`peak_ram_mb`).
+- **Processing Throughput:** Thousands of words processed per second (`throughput_kwords_sec`).
 
 ---
 
-## 4. Roteiro Gradual de Implementação
+## 3. Resilience and Checkpoint Recovery
 
-### Etapa 1: Função Modular de Treinamento (Seção 3) - CONCLUÍDA
-* Implementação da função `train_word2vec_model(...)` com reprodutibilidade (`seed=42`) e paralelismo em CPU.
-* Validação via *smoke test* rápido no Colab (executado em 53s).
+1. **Immediate Disk Checkpointing (`TP1/outputs/experiment_results.csv`):**
+   * As soon as model $k$ completes training and evaluation, its record (hyperparameters, evaluation metrics, hardware telemetry) is committed to disk in CSV format.
+   * Results never reside exclusively in volatile memory.
+2. **Automatic Resume Capability:**
+   * Prior to launching training for model $k$, the runner checks whether its identifier already exists in the CSV file.
+   * If recorded, it skips execution immediately and advances to the next configuration.
+   * If a session disconnects midway through the grid, re-executing the cell resumes precisely from the uncompleted configuration.
+3. **Progress Telemetry and Execution Logs:**
+   * Structured console logs report step index `[k/54]`, iteration elapsed time, peak RAM, and dynamic estimated completion time (ETA).
 
-### Etapa 2: Módulo de Avaliação por Álgebra Vetorial e Estatística (Seção 4) - CONCLUÍDA NO NOTEBOOK
-* Implementação da função `evaluate_word2vec_analogies(model, df_analogies)` com suporte duplo: Distância de Cosseno $[0, 2]$ e Score de Alinhamento $[-1, 1]$.
-* Cabeçalho justificando em primeira pessoa o uso da escala intuitiva $[-1, 1]$ para todos os gráficos e análises.
-* Célula de teste validada no *smoke model* com 91,21% de cobertura das analogias.
+---
 
-### Etapa 3: Execução Controlada da Grade de 54 Modelos (Seção 5) - IMPLEMENTADA NO NOTEBOOK
-* Vetores de busca parametrizáveis (`GRID_ARCHITECTURES`, `GRID_WINDOWS`, `GRID_VECTOR_SIZES`, `GRID_EPOCHS`).
-* Profiling de hardware e consumo de recursos (CPU, RAM, throughput, tempo).
-* Logs dinâmicos de execução (progresso, tempo decorrido, ETA dinâmico e previsão de término), sem poluição de scores no terminal.
-* Gravação incremental em `TP1/outputs/experiment_results.csv`.
+## 4. Phased Implementation Roadmap
 
-### Etapa 4: Visualizações e Conclusão Científica (Seções 6 e 7)
-* Gráficos comparativos com a escala de alinhamento $[-1, 1]$:
-  1. Comparação CBOW vs. Skip-gram (barras com intervalo de desvio padrão).
-  2. Efeito do Tamanho da Janela (curvas de alinhamento por $w \in \{2, 5, 10\}$).
-  3. Heatmap de Dimensão do Vetor $\times$ Épocas.
-  4. Curva de *Trade-off* de Pareto: Desempenho (Alinhamento) $\times$ Tempo de Treinamento e Memória.
-  5. Projeção geométrica 2D (PCA / t-SNE) das analogias.
-  6. Discussão e síntese identificando a melhor combinação.
+### Phase 1: Modular Training Function (Section 3) - COMPLETED
+* Implementation of `train_word2vec_model(...)` with deterministic seed (`seed=42`) and CPU multi-worker streaming.
+* Smoke test validation completed in 53 seconds.
+
+### Phase 2: Vector Evaluation Engine (Section 4) - COMPLETED
+* Implementation of `evaluate_word2vec_analogies(model, df_analogies)` supporting both Cosine Distance $[0, 2]$ and Alignment Score $[-1, 1]$.
+* Smoke model verification achieved 91.21% analogy coverage over vocabulary.
+
+### Phase 3: Controlled 54-Model Grid Search (Section 5) - COMPLETED
+* Parameter search vectors (`GRID_ARCHITECTURES`, `GRID_WINDOWS`, `GRID_VECTOR_SIZES`, `GRID_EPOCHS`).
+* Hardware resource monitoring (CPU, RAM, throughput, wall-clock time).
+* Incremental checkpointing to `TP1/outputs/experiment_results.csv`.
+* **Status:** All 54 models executed successfully (100% completion). Champion model identified: `M28_SG_w2_d50_e1` (Alignment: +0.5171, Global Mean Cosine Distance: 0.4829, Training Duration: 21.65s).
+
+### Phase 4: Scientific Visualizations and Conclusion (Sections 6 and 7) - COMPLETED
+* **Section 6: Comparative Empirical Visualizations (100% English, Individual Standalone Figures):**
+  1. *Cell 6.1 (Global Performance Spectrum):* Standalone S-curve ranking all 54 models from Rank 1 to 54 against Cosine Distance, highlighting champion M28 at Rank #1 with a gold star.
+  2. *Cell 6.2 (Top 10 Configurations Leaderboard):* Standalone horizontal bar chart with bold internal annotations displaying metrics for the top 10 models.
+  3. *Cell 6.3 (Category Cosine Distance Distributions):* Standalone horizontal boxplots across all 14 categories with explicit mean diamonds ($\mu$), median lines ($Md$), and M28 markers.
+  4. *Cell 6.4 (Macro Section Comparison):* Standalone boxplot comparing Semantic vs. Syntactic section error distributions.
+  5. *Cell 6.5 (Context Window Dynamics):* Standalone line plot tracing window size impact ($w \in \{2, 5, 10\}$) by architecture with standard deviation bands.
+  6. *Cell 6.6 (Dimension vs. Epochs Heatmap):* Standalone Skip-gram matrix heatmap crossing vector size and training epochs.
+  7. *Cell 6.7 (Dual-Axis Trade-off Balance Curve):* Standalone dual-curve figure showing Cosine Distance descending while Training Time ascends, highlighting the M28 Optimal Balance Point.
+  8. *Cell 6.8 (Pareto Efficiency Frontier):* Standalone scatter plot of latency vs. distance, bubble size scaled by peak RAM (MB), tracing the Pareto optimal frontier.
+* **Section 7: Results Discussion (Pure Markdown):**
+  - High-signal synthesis presenting the best-performing model (`M28_SG_w2_d50_e1`) and its metrics.
+  - Core empirical takeaways from Section 6 plots (spectrum, category distributions, trade-offs).
+  - Hyperparameter sensitivity overview analyzing Architecture, Context Window, Dimension, and Epochs.

@@ -29,11 +29,11 @@ python3 -m venv .venv
 source .venv/bin/activate
 
 # Install dependencies
-pip install gensim numpy scipy matplotlib seaborn jupyter ipykernel
+pip install gensim numpy scipy matplotlib seaborn pandas jupyter ipykernel
 ```
 
 ### Google Colab
-If executing on Google Colab, the notebook automatically installs the required dependencies in its initial cell via `!pip install -q gensim numpy scipy matplotlib seaborn`.
+If executing on Google Colab, the notebook automatically installs the required dependencies in its initial cell via `%pip install -q gensim numpy scipy matplotlib seaborn pandas`.
 
 ---
 
@@ -53,19 +53,17 @@ Models are evaluated on the **Google Analogy Test Set** (`questions-words.txt`, 
 $$\vec{R} = \vec{v}(B) + \vec{v}(A) - \vec{v}(C)$$
 
 Model quality is quantified using two complementary metrics:
-1. **Cosine Distance ($d \in [0, 2]$):** The formal loss metric from the assignment handout, where lower values indicate closer proximity to the expected target vector $\vec{v}(D)$ ($d=0$ is an exact match).
-2. **Intuitive Alignment Score ($s = 1 - d \in [-1, 1]$):** A normalized directional alignment score where $+1$ represents perfect alignment ($0^\circ$), $0$ represents orthogonality ($90^\circ$), and $-1$ represents diametric opposition ($180^\circ$). All comparative charts, heatmaps, and ranking tables follow this intuitive $[-1, 1]$ scale (higher is better).
+1. **Cosine Distance ($d \in [0, 2]$):** The formal metric from the assignment handout, where lower values indicate closer proximity to the expected target vector $\vec{v}(D)$ ($d=0$ is an exact match).
+2. **Intuitive Alignment Score ($s = 1 - d \in [-1, 1]$):** A normalized directional alignment score where $+1$ represents perfect alignment ($0^\circ$), $0$ represents orthogonality ($90^\circ$), and $-1$ represents diametric opposition ($180^\circ$).
 
-For each configuration, the pipeline computes the **Global Mean and Standard Deviation**, as well as stratified metrics across all 14 individual categories and semantic vs. syntactic blocks. 
-
-### Resource Profiling and Pareto Efficiency Trade-offs
-To evaluate the trade-off between representation quality and computational cost, the pipeline profiles:
-- **Hardware Context:** Platform CPU model, core counts, RAM availability, and GPU device.
-- **Resource Utilization:** Wall-clock training duration (`train_time_sec`), evaluation time, accumulated CPU time, peak memory footprint (`peak_ram_mb`), and processing throughput (`throughput_kwords_sec`).
-- **Parallelism:** Multiprocessing across CPU cores (`workers = os.cpu_count()`).
-
-### Experiment Checkpointing and Resilience
-The 54 grid combinations ($2 \times 3 \times 3 \times 3$) are executed with persistent checkpointing: each model's evaluation metrics and resource statistics are appended immediately to `TP1/outputs/experiment_results.csv`. If a Google Colab session disconnects, the execution script automatically detects completed models and resumes from where it stopped without duplicating compute.
+### Empirical Findings and Winning Configuration
+Across all 54 systematically evaluated models, configuration **`M28_SG_w2_d50_e1`** achieved the global minimum cosine distance:
+- **Architecture:** Skip-gram (`sg=1`)
+- **Window:** $w = 2$
+- **Dimension:** $d = 50$
+- **Epochs:** $e = 1$
+- **Global Mean Cosine Distance:** **0.4829** (Global Alignment: **+0.5171**)
+- **Training Duration:** **21.65 seconds** (85.5% faster than experimental average)
 
 ### Running the Notebook
 Open and execute the self-contained notebook:
